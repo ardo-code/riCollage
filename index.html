@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Collage">
+<title>Collage Frame</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#111114">
+<style>
+:root{--bg:#f2f2f5;--fg:#1c1c1e;--card:#fff;--line:#d0d0d6;--acc:#0a84ff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111114;--fg:#f2f2f5;--card:#232328;--line:#3a3a42}}
+:root[data-theme="dark"]{--bg:#111114;--fg:#f2f2f5;--card:#232328;--line:#3a3a42}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:15px -apple-system,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px;overflow:hidden}
+#hint{font-size:13px;opacity:.7;text-align:center;min-height:18px}
+#wrap{flex:1;min-height:0;width:100%;display:flex;justify-content:center;align-items:center}
+canvas{max-width:100%;max-height:100%;aspect-ratio:2/3;touch-action:none;border-radius:6px;box-shadow:0 2px 14px rgba(0,0,0,.3);background:#fff}
+#bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center}
+button,label.c{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font:inherit;font-weight:600}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff}
+button:disabled{opacity:.4}
+input[type=color]{width:34px;height:34px;border:0;padding:0;background:none;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="hint"></div>
+<div id="wrap"><canvas id="cv" width="1000" height="1500"></canvas></div>
+<div id="bar">
+  <button id="commit" class="p">Commit</button>
+  <button id="change">Change photo</button>
+  <button id="reset">Reset</button>
+  <button id="export" class="p">Export</button>
+  <label class="c">Frame <input type="color" id="col" value="#ffffff"></label>
+</div>
+<input type="file" id="file" accept="image/*" hidden>
+<script>
+const W=1000,H=1500,cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+let bg='#ffffff',active=null,pending=null;
+const slots=[
+ {p:[[30,30],[500,30],[470,700],[30,740]]},
+ {p:[[535,30],[970,30],[970,658],[505,700]]},
+ {p:[[30,780],[970,694],[970,1470],[30,1470]]}
+];
+slots.forEach(s=>{
+  const xs=s.p.map(a=>a[0]),ys=s.p.map(a=>a[1]);
+  s.bw=Math.max(...xs)-Math.min(...xs);s.bh=Math.max(...ys)-Math.min(...ys);
+  s.cx=(Math.max(...xs)+Math.min(...xs))/2;s.cy=(Math.max(...ys)+Math.min(...ys))/2;
+  clear(s);
+});
+function clear(s){s.img=null;s.x=0;s.y=0;s.sc=1;s.rot=0;s.locked=false}
+function path(c,p){c.beginPath();p.forEach((a,i)=>i?c.lineTo(a[0],a[1]):c.moveTo(a[0],a[1]));c.closePath()}
+function inside(p,x,y){let r=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const a=p[i],b=p[j];if((a[1]>y)!=(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])r=!r}return r}
+function draw(c,ui){
+  c.fillStyle=bg;c.fillRect(0,0,W,H);
+  slots.forEach(s=>{
+    c.save();path(c,s.p);c.clip();
+    if(s.img){
+      c.translate(s.cx+s.x,s.cy+s.y);c.rotate(s.rot);c.scale(s.sc,s.sc);
+      c.drawImage(s.img,-s.img.naturalWidth/2,-s.img.naturalHeight/2);
+    }else{
+      c.fillStyle='#d8d8de';c.fillRect(0,0,W,H);
+      if(ui){c.fillStyle='#888';c.font='bold 120px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('+',s.cx,s.cy)}
+    }
+    c.restore();
+  });
+  if(ui&&active){c.save();path(c,active.p);c.lineWidth=8;c.strokeStyle='#0a84ff';c.setLineDash([24,14]);c.stroke();c.restore()}
+}
+function render(){
+  draw(ctx,true);
+  const e=active&&!active.locked;
+  $('commit').disabled=!e;$('change').disabled=!active;
+  $('hint').textContent=e?'Drag to move · two fingers to resize & rotate · then Commit'
+    :slots.every(s=>s.img)?'All set — tap any photo to re-adjust, or Export':'Tap a slot to add a photo';
+}
+function pickFor(s){pending=s;$('file').value='';$('file').click()}
+$('file').onchange=e=>{
+  const f=e.target.files[0];if(!f||!pending)return;
+  const img=new Image(),url=URL.createObjectURL(f),s=pending;
+  img.onload=()=>{
+    s.img=img;s.x=s.y=0;s.rot=0;s.locked=false;
+    s.sc=Math.max(s.bw/img.naturalWidth,s.bh/img.naturalHeight);
+    if(active&&active!==s)active.locked=true;
+    active=s;render();
+  };
+  img.src=url;
+};
+$('commit').onclick=()=>{if(active){active.locked=true;active=null;render()}};
+$('change').onclick=()=>{if(active)pickFor(active)};
+$('reset').onclick=()=>{if(confirm('Clear all three photos?')){slots.forEach(clear);active=null;render()}};
+$('col').oninput=e=>{bg=e.target.value;render()};
+$('export').onclick=()=>{
+  const o=document.createElement('canvas');o.width=2000;o.height=3000;
+  const c=o.getContext('2d');c.scale(2,2);draw(c,false);
+  o.toBlob(async b=>{
+    const f=new File([b],'collage.png',{type:'image/png'});
+    try{
+      if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}
+    }catch(err){if(err.name==='AbortError')return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='collage.png';a.click();
+  },'image/png');
+};
+/* gestures */
+const ptrs=new Map();let last=null,tap=null;
+function pos(e){const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]}
+function pair(){const[a,b]=[...ptrs.values()];return{mx:(a.x+b.x)/2,my:(a.y+b.y)/2,d:Math.hypot(a.x-b.x,a.y-b.y)||1,a:Math.atan2(b.y-a.y,b.x-a.x)}}
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);
+  const[x,y]=pos(e);ptrs.set(e.pointerId,{x,y});
+  if(ptrs.size===1)tap={x,y,t:Date.now(),ok:true};
+  else{tap=null;last=ptrs.size===2?pair():null}
+});
+cv.addEventListener('pointermove',e=>{
+  const p=ptrs.get(e.pointerId);if(!p)return;
+  const[x,y]=pos(e),ox=p.x,oy=p.y;p.x=x;p.y=y;
+  const s=active,ed=s&&!s.locked&&s.img;
+  if(ptrs.size===1){
+    if(tap&&Math.hypot(x-tap.x,y-tap.y)>10)tap.ok=false;
+    if(ed&&(!tap||!tap.ok)){s.x+=x-ox;s.y+=y-oy;render()}
+  }else if(ptrs.size===2){
+    const n=pair();
+    if(ed&&last){
+      const ds=n.d/last.d,da=n.a-last.a,cs=Math.cos(da),sn=Math.sin(da);
+      const vx=s.cx+s.x-last.mx,vy=s.cy+s.y-last.my;
+      s.x=n.mx+ds*(vx*cs-vy*sn)-s.cx;s.y=n.my+ds*(vx*sn+vy*cs)-s.cy;
+      s.sc=Math.min(20,Math.max(.05,s.sc*ds));s.rot+=da;render();
+    }
+    last=n;
+  }
+});
+function up(e){
+  if(!ptrs.has(e.pointerId))return;
+  const p=ptrs.get(e.pointerId);ptrs.delete(e.pointerId);last=null;
+  if(ptrs.size===0&&tap&&tap.ok&&Date.now()-tap.t<400){
+    const s=slots.find(s=>inside(s.p,p.x,p.y));
+    if(s){
+      if(!s.img)pickFor(s);
+      else if(s!==active||s.locked){if(active&&active!==s)active.locked=true;active=s;s.locked=false;render()}
+    }
+  }
+  if(ptrs.size===0)tap=null;
+}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{
+  if(!active||active.locked)return;e.preventDefault();
+  if(e.shiftKey)active.rot+=e.deltaY*.002;else active.sc=Math.min(20,Math.max(.05,active.sc*Math.exp(-e.deltaY*.001)));
+  render();
+},{passive:false});
+render();
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
