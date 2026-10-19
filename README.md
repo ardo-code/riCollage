@@ -1,2 +1,2 @@
 # riCollage
-Building a collage is bricolage. Using Ric-spec is riCollage. 
+Building a collage is bricolage. Building a Ric-spec collage is riCollage. 
