@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Collage">
-<title>Collage Frame</title>
+<meta name="apple-mobile-web-app-title" content="riCollage">
+<title>riCollage</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="theme-color" content="#111114">
@@ -16,9 +16,10 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--fg);font:15px -apple-system,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px;overflow:hidden}
+#logo{height:52px;width:auto;max-width:100%;border-radius:10px;flex:none}
 #hint{font-size:13px;opacity:.7;text-align:center;min-height:18px}
 #wrap{flex:1;min-height:0;width:100%;display:flex;justify-content:center;align-items:center}
-canvas{max-width:100%;max-height:100%;aspect-ratio:2/3;touch-action:none;border-radius:6px;box-shadow:0 2px 14px rgba(0,0,0,.3);background:#fff}
+canvas{max-width:100%;max-height:100%;aspect-ratio:4/5;touch-action:none;border-radius:6px;box-shadow:0 2px 14px rgba(0,0,0,.3);background:#fff}
 #bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center}
 button,label.c{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font:inherit;font-weight:600}
 button.p{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -27,8 +28,9 @@ input[type=color]{width:34px;height:34px;border:0;padding:0;background:none;vert
 </style>
 </head>
 <body>
+<img id="logo" src="header.jpg" alt="riCollage">
 <div id="hint"></div>
-<div id="wrap"><canvas id="cv" width="1000" height="1500"></canvas></div>
+<div id="wrap"><canvas id="cv" width="1080" height="1350"></canvas></div>
 <div id="bar">
   <button id="commit" class="p">Commit</button>
   <button id="change">Change photo</button>
@@ -38,13 +40,13 @@ input[type=color]{width:34px;height:34px;border:0;padding:0;background:none;vert
 </div>
 <input type="file" id="file" accept="image/*" hidden>
 <script>
-const W=1000,H=1500,cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=1080,H=1350,cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const $=id=>document.getElementById(id);
 let bg='#ffffff',active=null,pending=null;
 const slots=[
- {p:[[30,30],[500,30],[470,700],[30,740]]},
- {p:[[535,30],[970,30],[970,658],[505,700]]},
- {p:[[30,780],[970,694],[970,1470],[30,1470]]}
+ {p:[[15,15],[532,15],[508,555],[15,600]]},
+ {p:[[550,15],[1065,15],[1065,504],[526,553]]},
+ {p:[[15,618],[1065,522],[1065,1335],[15,1335]]}
 ];
 slots.forEach(s=>{
   const xs=s.p.map(a=>a[0]),ys=s.p.map(a=>a[1]);
@@ -94,8 +96,8 @@ $('change').onclick=()=>{if(active)pickFor(active)};
 $('reset').onclick=()=>{if(confirm('Clear all three photos?')){slots.forEach(clear);active=null;render()}};
 $('col').oninput=e=>{bg=e.target.value;render()};
 $('export').onclick=()=>{
-  const o=document.createElement('canvas');o.width=2000;o.height=3000;
-  const c=o.getContext('2d');c.scale(2,2);draw(c,false);
+  const o=document.createElement('canvas');o.width=1080;o.height=1350;
+  const c=o.getContext('2d');draw(c,false);
   o.toBlob(async b=>{
     const f=new File([b],'collage.png',{type:'image/png'});
     try{

@@ -1,6 +1,6 @@
 {
-  "name": "Collage Frame",
-  "short_name": "Collage",
+  "name": "riCollage",
+  "short_name": "riCollage",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
